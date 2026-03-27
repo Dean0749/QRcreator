@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>QR Beauty — 美化 QR Code 產生器</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f3ef;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1814;
+    --text2: #7a7570;
+    --text3: #b0aca6;
+    --accent: #1a1814;
+    --accent-inv: #ffffff;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--surface);
+  }
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-mark svg { width: 18px; height: 18px; }
+  header h1 { font-size: 16px; font-weight: 500; letter-spacing: -0.01em; }
+  header span { font-size: 12px; color: var(--text2); margin-left: 4px; }
+
+  /* ── Layout ── */
+  .main {
+    display: flex;
+    height: calc(100vh - 57px);
+    overflow: hidden;
+  }
+  .sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: var(--surface);
+    border-right: 0.5px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 32px;
+    background: var(--bg);
+  }
+
+  /* ── Section ── */
+  .sec-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+  .section { display: flex; flex-direction: column; }
+
+  /* ── URL Input ── */
+  .url-input {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface2);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .url-input:focus { border-color: var(--accent); background: var(--surface); }
+
+  /* ── Brand Grid ── */
+  .brand-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .bp {
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 3px 4px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 9px;
+    color: var(--text2);
+    transition: all 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: var(--surface2);
+  }
+  .bp:hover { border-color: var(--border2); background: var(--surface); }
+  .bp.active { border: 1.5px solid var(--accent); color: var(--text); background: var(--surface); }
+  .bp-icon {
+    width: 24px; height: 24px;
+    border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Upload Box ── */
+  .upload-box {
+    border: 0.5px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text2);
+    transition: all 0.15s;
+    background: var(--surface2);
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+  .upload-box:hover { border-color: var(--accent); color: var(--text); background: var(--surface); }
+
+  /* ── Mode Buttons ── */
+  .mode-row { display: flex; gap: 4px; }
+  .mode-btn {
+    flex: 1; padding: 7px 4px;
+    font-size: 10px; font-weight: 500;
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--surface2);
+    color: var(--text2);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .mode-btn:hover { border-color: var(--border2); color: var(--text); }
+  .mode-btn.active { background: var(--accent); color: var(--accent-inv); border-color: transparent; }
+
+  /* ── Style Grid ── */
+  .style-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .sc {
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 3px 5px;
+    cursor: pointer;
+    text-align: center;
+    font-size: 9px;
+    color: var(--text2);
+    transition: all 0.15s;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: var(--surface2);
+  }
+  .sc:hover { border-color: var(--border2); background: var(--surface); }
+  .sc.active { border: 1.5px solid var(--accent); color: var(--text); background: var(--surface); }
+  .sc svg { width: 28px; height: 28px; }
+
+  /* ── Color Dots ── */
+  .color-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .cd {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2.5px solid transparent;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .cd:hover { transform: scale(1.15); }
+  .cd.active { border-color: var(--accent); }
+  input[type="color"] {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    padding: 0;
+    background: none;
+  }
+
+  /* ── Eye Style ── */
+  .eye-row { display: flex; gap: 5px; }
+  .eye-btn {
+    flex: 1;
+    display: flex; align-items: center; gap: 5px; justify-content: center;
+    padding: 6px 4px;
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 10px; color: var(--text2);
+    background: var(--surface2);
+    transition: all 0.15s;
+  }
+  .eye-btn:hover { border-color: var(--border2); background: var(--surface); }
+  .eye-btn.active { border: 1.5px solid var(--accent); color: var(--text); background: var(--surface); }
+
+  /* ── Generate Button ── */
+  .gen-btn {
+    width: 100%;
+    padding: 11px;
+    background: var(--accent);
+    color: var(--accent-inv);
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: -0.01em;
+  }
+  .gen-btn:hover { opacity: 0.85; }
+  .gen-btn:active { transform: scale(0.98); }
+
+  /* ── QR Preview ── */
+  .qr-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 2px 24px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.06);
+  }
+  #qrCanvas { display: block; }
+
+  /* ── Download Buttons ── */
+  .dl-row { display: flex; gap: 8px; }
+  .dl-btn {
+    padding: 8px 20px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--surface);
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .dl-btn:hover { background: var(--accent); color: var(--accent-inv); border-color: transparent; }
+
+  #statusMsg {
+    font-size: 11px;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    min-height: 16px;
+    text-align: center;
+  }
+
+  /* ── Crop Modal ── */
+  .crop-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+    backdrop-filter: blur(4px);
+  }
+  .crop-modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    width: 420px;
+    max-width: 95vw;
+    display: flex; flex-direction: column; gap: 16px;
+    box-shadow: 0 8px 48px rgba(0,0,0,0.2);
+  }
+  .crop-title { font-size: 15px; font-weight: 500; }
+  .crop-hint { font-size: 11px; color: var(--text2); line-height: 1.6; }
+  .crop-stage {
+    position: relative;
+    width: 300px; height: 300px;
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 10px;
+    border: 0.5px solid var(--border);
+    background: repeating-conic-gradient(#d8d4cf 0% 25%, #ebe8e3 0% 50%) 0 0 / 16px 16px;
+    cursor: move;
+    user-select: none;
+  }
+  #cropImg { position: absolute; transform-origin: 0 0; }
+  .crop-frame {
+    position: absolute; inset: 0;
+    border: 2px solid rgba(255,255,255,0.85);
+    border-radius: 6px;
+    pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.32);
+  }
+  .crop-sl-row { display: flex; align-items: center; gap: 10px; }
+  .crop-sl-lbl { font-size: 11px; color: var(--text2); min-width: 44px; }
+  .crop-sl-val { font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace; min-width: 38px; text-align: right; }
+  .crop-sl-row input[type="range"] { flex: 1; }
+  .crop-actions { display: flex; gap: 8px; }
+  .crop-btn {
+    flex: 1; padding: 9px;
+    border-radius: var(--radius); font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: opacity 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .crop-btn:hover { opacity: 0.8; }
+  .crop-confirm { background: var(--accent); color: var(--accent-inv); border: none; }
+  .crop-cancel { background: var(--surface2); border: 0.5px solid var(--border); color: var(--text); }
+
+  /* ── Scrollbar ── */
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 720px) {
+    .main { flex-direction: column; height: auto; overflow: visible; }
+    .sidebar { width: 100%; min-width: 0; height: auto; overflow: visible; }
+    .canvas-area { padding: 24px 16px; }
+    header { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">
+    <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="6" height="6" rx="1.5" fill="white"/>
+      <rect x="1" y="11" width="6" height="6" rx="1.5" fill="white"/>
+      <rect x="11" y="1" width="6" height="6" rx="1.5" fill="white"/>
+      <circle cx="14" cy="14" r="2.5" fill="white"/>
+      <circle cx="11" cy="11" r="1.5" fill="white" opacity="0.5"/>
+      <circle cx="8.5" cy="14" r="1.5" fill="white" opacity="0.5"/>
+      <circle cx="14" cy="8.5" r="1.5" fill="white" opacity="0.5"/>
+    </svg>
+  </div>
+  <h1>QR Beauty</h1>
+  <span>美化 QR Code 產生器</span>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+
+    <div class="section">
+      <div class="sec-label">目標網址</div>
+      <input class="url-input" id="urlInput" placeholder="https://example.com" value="https://instagram.com"/>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">品牌 / Logo</div>
+      <div class="brand-grid" id="brandGrid">
+        <div class="bp active" data-brand="ig">
+          <div class="bp-icon" style="background:linear-gradient(45deg,#f09433,#dc2743,#bc1888)">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="white"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+          </div>
+          <span>IG</span>
+        </div>
+        <div class="bp" data-brand="fb">
+          <div class="bp-icon" style="background:#1877F2">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="white"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          </div>
+          <span>FB</span>
+        </div>
+        <div class="bp" data-brand="yt">
+          <div class="bp-icon" style="background:#FF0000">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="white"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>
+          </div>
+          <span>YT</span>
+        </div>
+        <div class="bp" data-brand="wa">
+          <div class="bp-icon" style="background:#25D366">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          </div>
+          <span>WA</span>
+        </div>
+        <div class="bp" data-brand="custom">
+          <div class="bp-icon" style="background:#f0ede8;border:0.5px solid #ddd">
+            <span style="font-size:15px;color:#999">+</span>
+          </div>
+          <span>自訂</span>
+        </div>
+      </div>
+      <div class="upload-box" id="logoUploadArea">
+        點擊上傳自訂 Logo<br>
+        <span style="font-size:10px;color:#b0aca6">PNG 透明背景效果最佳</span>
+      </div>
+      <input type="file" id="logoInput" accept="image/*" style="display:none"/>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">融合模式</div>
+      <div class="mode-row">
+        <button class="mode-btn active" id="modeColor">Logo 染色</button>
+        <button class="mode-btn" id="modeGrad">去飽和</button>
+        <button class="mode-btn" id="modeSplit">染色+Logo</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">Module 樣式</div>
+      <div class="style-grid" id="styleGrid">
+        <div class="sc active" data-style="circle">
+          <svg viewBox="0 0 28 28"><circle cx="5" cy="5" r="3.5" fill="currentColor"/><circle cx="14" cy="5" r="3.5" fill="currentColor" opacity=".4"/><circle cx="23" cy="5" r="3.5" fill="currentColor"/><circle cx="5" cy="14" r="3.5" fill="currentColor" opacity=".4"/><circle cx="14" cy="14" r="3.5" fill="currentColor" opacity=".7"/><circle cx="5" cy="23" r="3.5" fill="currentColor"/><circle cx="23" cy="23" r="3.5" fill="currentColor" opacity=".6"/></svg>
+          <span>圓點</span>
+        </div>
+        <div class="sc" data-style="square">
+          <svg viewBox="0 0 28 28"><rect x="1" y="1" width="8" height="8" fill="currentColor"/><rect x="11" y="1" width="8" height="8" fill="currentColor" opacity=".4"/><rect x="21" y="1" width="8" height="8" fill="currentColor"/><rect x="1" y="11" width="8" height="8" fill="currentColor" opacity=".5"/><rect x="11" y="11" width="8" height="8" fill="currentColor" opacity=".7"/><rect x="21" y="21" width="8" height="8" fill="currentColor" opacity=".6"/></svg>
+          <span>方形</span>
+        </div>
+        <div class="sc" data-style="rounded">
+          <svg viewBox="0 0 28 28"><rect x="1" y="1" width="8" height="8" rx="2.5" fill="currentColor"/><rect x="11" y="1" width="8" height="8" rx="2.5" fill="currentColor" opacity=".4"/><rect x="21" y="1" width="8" height="8" rx="2.5" fill="currentColor"/><rect x="1" y="11" width="8" height="8" rx="2.5" fill="currentColor" opacity=".5"/><rect x="11" y="11" width="8" height="8" rx="2.5" fill="currentColor" opacity=".7"/><rect x="21" y="21" width="8" height="8" rx="2.5" fill="currentColor" opacity=".6"/></svg>
+          <span>圓角</span>
+        </div>
+        <div class="sc" data-style="diamond">
+          <svg viewBox="0 0 28 28"><rect x="1" y="1" width="7" height="7" transform="rotate(45 4.5 4.5)" fill="currentColor"/><rect x="11" y="1" width="7" height="7" transform="rotate(45 14.5 4.5)" fill="currentColor" opacity=".5"/><rect x="21" y="1" width="7" height="7" transform="rotate(45 24.5 4.5)" fill="currentColor"/><rect x="11" y="11" width="7" height="7" transform="rotate(45 14.5 14.5)" fill="currentColor" opacity=".7"/></svg>
+          <span>菱形</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">背景顏色</div>
+      <div class="color-row" id="bgColors">
+        <div class="cd active" data-c="#ffffff" style="background:#fff;border:1px solid #ddd"></div>
+        <div class="cd" data-c="#FFFEF0" style="background:#FFFEF0;border:1px solid #e8e4d0"></div>
+        <div class="cd" data-c="#F0F4FF" style="background:#F0F4FF;border:1px solid #c8d0ee"></div>
+        <div class="cd" data-c="#FFF0F8" style="background:#FFF0F8;border:1px solid #e8c8d8"></div>
+        <div class="cd" data-c="#111111" style="background:#111"></div>
+        <div class="cd" data-c="#1a1a2e" style="background:#1a1a2e"></div>
+        <input type="color" id="bgCustom" value="#ffffff" title="自訂背景色"/>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">非 Logo 區域顏色</div>
+      <div class="color-row" id="fgColors">
+        <div class="cd active" data-c="#cccccc" style="background:#ccc"></div>
+        <div class="cd" data-c="#aaaaaa" style="background:#aaa"></div>
+        <div class="cd" data-c="#000000" style="background:#000"></div>
+        <div class="cd" data-c="#1877F2" style="background:#1877F2"></div>
+        <div class="cd" data-c="#E1306C" style="background:#E1306C"></div>
+        <div class="cd" data-c="#d4a853" style="background:#d4a853"></div>
+        <input type="color" id="fgCustom" value="#cccccc" title="自訂前景色"/>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sec-label">定位框樣式</div>
+      <div class="eye-row">
+        <div class="eye-btn active" id="eyeSquare">
+          <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="4" y="4" width="8" height="8" fill="currentColor"/></svg>
+          <span>方形</span>
+        </div>
+        <div class="eye-btn" id="eyeRound">
+          <svg width="16" height="16" viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="4" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="4" y="4" width="8" height="8" rx="2" fill="currentColor"/></svg>
+          <span>圓角</span>
+        </div>
+        <div class="eye-btn" id="eyeCircle">
+          <svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="8" cy="8" r="3" fill="currentColor"/></svg>
+          <span>圓形</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="gen-btn" id="generateBtn">生成美化 QR Code</button>
+
+  </div><!-- /sidebar -->
+
+  <div class="canvas-area">
+    <div class="qr-card">
+      <canvas id="qrCanvas" width="300" height="300"></canvas>
+    </div>
+    <div class="dl-row">
+      <button class="dl-btn" id="dlPNG">↓ PNG 1024px</button>
+      <button class="dl-btn" id="dlHD">↓ PNG 2048px</button>
+    </div>
+    <p id="statusMsg"></p>
+  </div>
+</div><!-- /main -->
+
+<!-- Crop Modal -->
+<div class="crop-overlay" id="cropOverlay" style="display:none">
+  <div class="crop-modal">
+    <div class="crop-title">調整 Logo 裁切範圍</div>
+    <p class="crop-hint">拖曳圖片移動位置，滾輪或縮放滑桿調整大小。白框即為最終套用範圍。</p>
+    <div class="crop-stage" id="cropStage">
+      <img id="cropImg" draggable="false"/>
+      <div class="crop-frame"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="crop-sl-row">
+        <span class="crop-sl-lbl">縮放</span>
+        <input type="range" id="cropScale" min="10" max="300" value="100" step="1"/>
+        <span class="crop-sl-val" id="cropScaleVal">100%</span>
+      </div>
+      <div class="crop-sl-row">
+        <span class="crop-sl-lbl">X 位置</span>
+        <input type="range" id="cropX" min="-300" max="300" value="0" step="1"/>
+        <span class="crop-sl-val" id="cropXVal">0</span>
+      </div>
+      <div class="crop-sl-row">
+        <span class="crop-sl-lbl">Y 位置</span>
+        <input type="range" id="cropY" min="-300" max="300" value="0" step="1"/>
+        <span class="crop-sl-val" id="cropYVal">0</span>
+      </div>
+    </div>
+    <div class="crop-actions">
+      <button class="crop-btn crop-cancel" id="cropCancel">取消</button>
+      <button class="crop-btn crop-confirm" id="cropConfirm">套用裁切</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+const S = {
+  url: 'https://instagram.com',
+  brand: 'ig',
+  style: 'circle',
+  bgColor: '#ffffff',
+  fgColor: '#cccccc',
+  eyeStyle: 'square',
+  mode: 'color',
+  customLogoImg: null,
+  croppedLogoCanvas: null,
+  qrMatrix: null
+};
+
+// ── Crop state ─────────────────────────────────────────────────────
+const crop = { scale: 1, x: 0, y: 0, dragging: false, startX: 0, startY: 0, startImgX: 0, startImgY: 0, rawImg: null };
+const STAGE = 300;
+
+function showCropModal(img) {
+  crop.rawImg = img;
+  document.getElementById('cropImg').src = img.src;
+  const fitScale = Math.max(STAGE / img.naturalWidth, STAGE / img.naturalHeight);
+  crop.scale = fitScale;
+  crop.x = (STAGE - img.naturalWidth * fitScale) / 2;
+  crop.y = (STAGE - img.naturalHeight * fitScale) / 2;
+  document.getElementById('cropScale').value = Math.round(fitScale * 100);
+  document.getElementById('cropScaleVal').textContent = Math.round(fitScale * 100) + '%';
+  document.getElementById('cropX').value = Math.round(crop.x);
+  document.getElementById('cropXVal').textContent = Math.round(crop.x);
+  document.getElementById('cropY').value = Math.round(crop.y);
+  document.getElementById('cropYVal').textContent = Math.round(crop.y);
+  applyCropTransform();
+  document.getElementById('cropOverlay').style.display = 'flex';
+}
+
+function applyCropTransform() {
+  const el = document.getElementById('cropImg');
+  el.style.width = crop.rawImg.naturalWidth * crop.scale + 'px';
+  el.style.height = crop.rawImg.naturalHeight * crop.scale + 'px';
+  el.style.left = crop.x + 'px';
+  el.style.top = crop.y + 'px';
+}
+
+document.getElementById('cropScale').addEventListener('input', e => {
+  const pct = parseInt(e.target.value);
+  document.getElementById('cropScaleVal').textContent = pct + '%';
+  const oldScale = crop.scale;
+  crop.scale = pct / 100;
+  const ratio = crop.scale / oldScale;
+  crop.x = STAGE / 2 - (STAGE / 2 - crop.x) * ratio;
+  crop.y = STAGE / 2 - (STAGE / 2 - crop.y) * ratio;
+  document.getElementById('cropX').value = Math.round(crop.x);
+  document.getElementById('cropXVal').textContent = Math.round(crop.x);
+  document.getElementById('cropY').value = Math.round(crop.y);
+  document.getElementById('cropYVal').textContent = Math.round(crop.y);
+  applyCropTransform();
+});
+document.getElementById('cropX').addEventListener('input', e => {
+  crop.x = parseInt(e.target.value);
+  document.getElementById('cropXVal').textContent = crop.x;
+  applyCropTransform();
+});
+document.getElementById('cropY').addEventListener('input', e => {
+  crop.y = parseInt(e.target.value);
+  document.getElementById('cropYVal').textContent = crop.y;
+  applyCropTransform();
+});
+
+// Drag
+const cropStage = document.getElementById('cropStage');
+cropStage.addEventListener('mousedown', e => { crop.dragging = true; crop.startX = e.clientX; crop.startY = e.clientY; crop.startImgX = crop.x; crop.startImgY = crop.y; });
+cropStage.addEventListener('touchstart', e => { const t = e.touches[0]; crop.dragging = true; crop.startX = t.clientX; crop.startY = t.clientY; crop.startImgX = crop.x; crop.startImgY = crop.y; }, { passive: true });
+function onMove(cx, cy) {
+  if (!crop.dragging) return;
+  crop.x = crop.startImgX + (cx - crop.startX);
+  crop.y = crop.startImgY + (cy - crop.startY);
+  document.getElementById('cropX').value = Math.round(crop.x);
+  document.getElementById('cropXVal').textContent = Math.round(crop.x);
+  document.getElementById('cropY').value = Math.round(crop.y);
+  document.getElementById('cropYVal').textContent = Math.round(crop.y);
+  applyCropTransform();
+}
+document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+document.addEventListener('touchmove', e => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
+document.addEventListener('mouseup', () => crop.dragging = false);
+document.addEventListener('touchend', () => crop.dragging = false);
+cropStage.addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -5 : 5;
+  const newPct = Math.min(300, Math.max(10, parseInt(document.getElementById('cropScale').value) + delta));
+  document.getElementById('cropScale').value = newPct;
+  document.getElementById('cropScale').dispatchEvent(new Event('input'));
+}, { passive: false });
+
+document.getElementById('cropCancel').addEventListener('click', () => {
+  document.getElementById('cropOverlay').style.display = 'none';
+});
+document.getElementById('cropConfirm').addEventListener('click', () => {
+  const out = document.createElement('canvas'); out.width = out.height = 400;
+  out.getContext('2d').drawImage(crop.rawImg, -crop.x / crop.scale, -crop.y / crop.scale, STAGE / crop.scale, STAGE / crop.scale, 0, 0, 400, 400);
+  S.croppedLogoCanvas = out;
+  const img = new Image(); img.src = out.toDataURL();
+  img.onload = () => { S.customLogoImg = img; };
+  document.getElementById('logoUploadArea').textContent = '✓ Logo 已裁切套用';
+  document.getElementById('cropOverlay').style.display = 'none';
+  if (S.qrMatrix) renderQR(S.qrMatrix, 'qrCanvas', 300);
+});
+
+// ── Brand logo canvas builders ─────────────────────────────────────
+function rrPath(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+function buildBrandCanvas(brand, size) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const ctx = cv.getContext('2d'); ctx.clearRect(0, 0, size, size);
+  if (brand === 'ig') {
+    const g = ctx.createLinearGradient(0, size, size, 0);
+    g.addColorStop(0, '#f09433'); g.addColorStop(.3, '#e6683c'); g.addColorStop(.5, '#dc2743'); g.addColorStop(.75, '#cc2366'); g.addColorStop(1, '#bc1888');
+    ctx.fillStyle = g; rrPath(ctx, size * .05, size * .05, size * .9, size * .9, size * .2); ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = size * .07;
+    rrPath(ctx, size * .2, size * .2, size * .6, size * .6, size * .14); ctx.stroke();
+    ctx.beginPath(); ctx.arc(size / 2, size / 2, size * .17, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(size * .72, size * .28, size * .07, 0, Math.PI * 2); ctx.fill();
+  } else if (brand === 'fb') {
+    ctx.fillStyle = '#1877F2'; ctx.beginPath(); ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'white'; ctx.font = `bold ${size * .7}px Georgia,serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('f', size * .54, size * .53);
+  } else if (brand === 'yt') {
+    ctx.fillStyle = '#FF0000'; rrPath(ctx, 0, size * .15, size, size * .7, size * .12); ctx.fill();
+    ctx.fillStyle = 'white'; ctx.beginPath();
+    ctx.moveTo(size * .35, size * .3); ctx.lineTo(size * .75, size * .5); ctx.lineTo(size * .35, size * .7); ctx.closePath(); ctx.fill();
+  } else if (brand === 'wa') {
+    ctx.fillStyle = '#25D366'; ctx.beginPath(); ctx.arc(size / 2, size / 2, size * .48, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = size * .07;
+    ctx.beginPath(); ctx.arc(size / 2, size * .42, size * .22, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'white';
+    const tx = size * .33, ty = size * .72;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + size * .08, ty - size * .12); ctx.lineTo(tx + size * .04, ty - size * .04); ctx.closePath(); ctx.fill();
+  }
+  return cv;
+}
+
+// ── Color map ─────────────────────────────────────────────────────
+function getColorMap(brand, N) {
+  const sz = N * 4;
+  let src;
+  if (brand === 'custom') {
+    if (S.croppedLogoCanvas) {
+      src = document.createElement('canvas'); src.width = src.height = sz;
+      src.getContext('2d').drawImage(S.croppedLogoCanvas, 0, 0, sz, sz);
+    } else if (S.customLogoImg) {
+      src = document.createElement('canvas'); src.width = src.height = sz;
+      src.getContext('2d').drawImage(S.customLogoImg, 0, 0, sz, sz);
+    } else return null;
+  } else {
+    src = buildBrandCanvas(brand, sz);
+  }
+  return { data: src.getContext('2d').getImageData(0, 0, sz, sz).data, size: sz };
+}
+
+function toHex(r, g, b) { return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join(''); }
+function blendColor(cm, col, row, N, mode) {
+  if (!cm) return null;
+  const { data, size } = cm;
+  const px = Math.floor((col / N) * size), py = Math.floor((row / N) * size);
+  const idx = (py * size + px) * 4, a = data[idx + 3];
+  if (a < 30) return null;
+  const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+  if (mode === 'grad') {
+    const l = Math.round(r * .3 + g * .59 + b * .11);
+    return toHex(Math.round(r * .7 + l * .3), Math.round(g * .7 + l * .3), Math.round(b * .7 + l * .3));
+  }
+  return toHex(r, g, b);
+}
+
+// ── QR matrix ─────────────────────────────────────────────────────
+async function buildMatrix(text) {
+  return new Promise(resolve => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+    document.body.appendChild(d);
+    try {
+      new QRCode(d, { text, width: 1, height: 1, correctLevel: QRCode.CorrectLevel.H });
+      setTimeout(() => {
+        const img = d.querySelector('img');
+        const cv = document.createElement('canvas'); cv.width = cv.height = 200;
+        const ctx = cv.getContext('2d');
+        const finish = () => {
+          ctx.drawImage(img, 0, 0, 200, 200);
+          const data = ctx.getImageData(0, 0, 200, 200).data;
+          const N = 37, mat = [];
+          for (let r = 0; r < N; r++) {
+            mat[r] = [];
+            for (let c = 0; c < N; c++) {
+              const px = Math.floor((c + .5) * 200 / N), py = Math.floor((r + .5) * 200 / N);
+              mat[r][c] = data[(py * 200 + px) * 4] < 128;
+            }
+          }
+          document.body.removeChild(d); resolve(mat);
+        };
+        if (img.complete) finish(); else img.onload = finish;
+      }, 150);
+    } catch (e) { document.body.removeChild(d); resolve(null); }
+  });
+}
+
+// ── Draw helpers ──────────────────────────────────────────────────
+function drawMod(ctx, x, y, ms, style, color) {
+  const s = ms - 1.5, h = s / 2;
+  ctx.fillStyle = color;
+  if (style === 'square') { ctx.fillRect(x, y, s, s); }
+  else if (style === 'rounded') {
+    const r = s * .3; ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.lineTo(x + s - r, y); ctx.quadraticCurveTo(x + s, y, x + s, y + r);
+    ctx.lineTo(x + s, y + s - r); ctx.quadraticCurveTo(x + s, y + s, x + s - r, y + s);
+    ctx.lineTo(x + r, y + s); ctx.quadraticCurveTo(x, y + s, x, y + s - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath(); ctx.fill();
+  } else if (style === 'circle') {
+    ctx.beginPath(); ctx.arc(x + h, y + h, h, 0, Math.PI * 2); ctx.fill();
+  } else if (style === 'diamond') {
+    ctx.beginPath(); ctx.moveTo(x + h, y); ctx.lineTo(x + s, y + h); ctx.lineTo(x + h, y + s); ctx.lineTo(x, y + h); ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawEye(ctx, er, ec, ms, fg, bg, eyeStyle, eyeColor) {
+  const x = ec * ms, y = er * ms;
+  const outer = 7 * ms - 1, inner = 5 * ms - 1, iOff = ms, core = 3 * ms - 1, cOff = 2 * ms;
+  const ec2 = eyeColor || fg;
+  function rr(x, y, w, h, r) {
+    if (r <= 0) { ctx.fillRect(x, y, w, h); return; }
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+  }
+  if (eyeStyle === 'circle') {
+    const oc = 7 * ms / 2;
+    ctx.fillStyle = ec2; ctx.beginPath(); ctx.arc(x + oc, y + oc, oc - .5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x + oc, y + oc, oc - ms * 1.1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ec2; ctx.beginPath(); ctx.arc(x + oc, y + oc, ms * 1.6, 0, Math.PI * 2); ctx.fill();
+  } else {
+    const rad = eyeStyle === 'round' ? ms * 1.2 : 0, rc = eyeStyle === 'round' ? ms * .5 : 0;
+    ctx.fillStyle = ec2; rr(x, y, outer, outer, rad); ctx.fill();
+    ctx.fillStyle = bg; rr(x + iOff - .5, y + iOff - .5, inner, inner, rad * .5); ctx.fill();
+    ctx.fillStyle = ec2; rr(x + cOff, y + cOff, core, core, rc); ctx.fill();
+  }
+}
+
+// ── Main render ────────────────────────────────────────────────────
+function renderQR(matrix, canvasId, canvasSize) {
+  const canvas = document.getElementById(canvasId);
+  canvas.width = canvas.height = canvasSize;
+  const N = matrix.length, ms = Math.floor(canvasSize / N);
+  const off = Math.floor((canvasSize - ms * N) / 2);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = S.bgColor; ctx.fillRect(0, 0, canvasSize, canvasSize);
+  const cm = getColorMap(S.brand, N);
+  const eyeOrigins = [[0, 0], [0, N - 7], [N - 7, 0]];
+  const eyeSet = new Set();
+  eyeOrigins.forEach(([er, ec]) => { for (let r = er; r < er + 7; r++) for (let c = ec; c < ec + 7; c++) eyeSet.add(r + ',' + c); });
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    if (!matrix[r][c] || eyeSet.has(r + ',' + c)) continue;
+    const lc = blendColor(cm, c, r, N, S.mode);
+    drawMod(ctx, off + c * ms, off + r * ms, ms, S.style, lc || S.fgColor);
+  }
+  const eyeAccent = { ig: '#C13584', fb: '#1877F2', yt: '#FF0000', wa: '#128C7E', custom: S.fgColor };
+  eyeOrigins.forEach(([er, ec]) => drawEye(ctx, er, ec, ms, S.fgColor, S.bgColor, S.eyeStyle, eyeAccent[S.brand] || S.fgColor));
+  if (S.mode === 'split') {
+    const lsz = canvasSize * .28, lx = (canvasSize - lsz) / 2, ly = (canvasSize - lsz) / 2;
+    ctx.fillStyle = S.bgColor;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(lx - 6, ly - 6, lsz + 12, lsz + 12, 8);
+    else ctx.rect(lx - 6, ly - 6, lsz + 12, lsz + 12);
+    ctx.fill();
+    if (S.brand === 'custom' && (S.croppedLogoCanvas || S.customLogoImg)) {
+      ctx.drawImage(S.croppedLogoCanvas || S.customLogoImg, lx, ly, lsz, lsz);
+    } else if (S.brand !== 'custom') {
+      ctx.drawImage(buildBrandCanvas(S.brand, Math.round(lsz * 2)), lx, ly, lsz, lsz);
+    }
+  }
+}
+
+// ── Render to off-screen canvas (for download) ─────────────────────
+function renderToCanvas(size) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = size;
+  const N = S.qrMatrix.length, ms = Math.floor(size / N);
+  const off = Math.floor((size - ms * N) / 2);
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = S.bgColor; ctx.fillRect(0, 0, size, size);
+  const cm = getColorMap(S.brand, N);
+  const eyeOrigins = [[0, 0], [0, N - 7], [N - 7, 0]];
+  const eyeSet = new Set();
+  eyeOrigins.forEach(([er, ec]) => { for (let r = er; r < er + 7; r++) for (let c = ec; c < ec + 7; c++) eyeSet.add(r + ',' + c); });
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    if (!S.qrMatrix[r][c] || eyeSet.has(r + ',' + c)) continue;
+    const lc = blendColor(cm, c, r, N, S.mode);
+    drawMod(ctx, off + c * ms, off + r * ms, ms, S.style, lc || S.fgColor);
+  }
+  const eyeAccent = { ig: '#C13584', fb: '#1877F2', yt: '#FF0000', wa: '#128C7E', custom: S.fgColor };
+  eyeOrigins.forEach(([er, ec]) => drawEye(ctx, er, ec, ms, S.fgColor, S.bgColor, S.eyeStyle, eyeAccent[S.brand] || S.fgColor));
+  if (S.mode === 'split') {
+    const lsz = size * .28, lx = (size - lsz) / 2, ly = (size - lsz) / 2;
+    ctx.fillStyle = S.bgColor;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(lx - 6, ly - 6, lsz + 12, lsz + 12, 8);
+    else ctx.rect(lx - 6, ly - 6, lsz + 12, lsz + 12);
+    ctx.fill();
+    if (S.brand === 'custom' && (S.croppedLogoCanvas || S.customLogoImg)) {
+      ctx.drawImage(S.croppedLogoCanvas || S.customLogoImg, lx, ly, lsz, lsz);
+    } else if (S.brand !== 'custom') {
+      ctx.drawImage(buildBrandCanvas(S.brand, Math.round(lsz * 2)), lx, ly, lsz, lsz);
+    }
+  }
+  return cv;
+}
+
+// ── Generate ───────────────────────────────────────────────────────
+async function generate() {
+  const msg = document.getElementById('statusMsg');
+  msg.textContent = '生成中...';
+  S.url = document.getElementById('urlInput').value || 'https://example.com';
+  const mat = await buildMatrix(S.url);
+  if (!mat) { msg.textContent = '無法生成，請確認網址'; return; }
+  S.qrMatrix = mat;
+  renderQR(mat, 'qrCanvas', 300);
+  msg.textContent = '';
+}
+
+// ── Upload & crop ──────────────────────────────────────────────────
+document.getElementById('logoUploadArea').addEventListener('click', () => document.getElementById('logoInput').click());
+document.getElementById('logoInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      S.brand = 'custom'; S.customLogoImg = img; S.croppedLogoCanvas = null;
+      document.querySelectorAll('.bp').forEach(b => b.classList.remove('active'));
+      document.querySelector('[data-brand="custom"]').classList.add('active');
+      showCropModal(img);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(f);
+});
+
+// ── Brand select ───────────────────────────────────────────────────
+document.getElementById('brandGrid').querySelectorAll('.bp').forEach(bp => {
+  bp.addEventListener('click', () => {
+    document.querySelectorAll('.bp').forEach(b => b.classList.remove('active'));
+    bp.classList.add('active'); S.brand = bp.dataset.brand;
+    if (bp.dataset.brand !== 'custom') {
+      S.croppedLogoCanvas = null; S.customLogoImg = null;
+      document.getElementById('logoUploadArea').innerHTML = '點擊上傳自訂 Logo<br><span style="font-size:10px;color:#b0aca6">PNG 透明背景效果最佳</span>';
+    } else {
+      document.getElementById('logoInput').click();
+    }
+    if (S.qrMatrix) renderQR(S.qrMatrix, 'qrCanvas', 300);
+  });
+});
+
+// ── Style ──────────────────────────────────────────────────────────
+document.getElementById('styleGrid').querySelectorAll('.sc').forEach(sc => {
+  sc.addEventListener('click', () => {
+    document.querySelectorAll('#styleGrid .sc').forEach(s => s.classList.remove('active'));
+    sc.classList.add('active'); S.style = sc.dataset.style;
+    if (S.qrMatrix) renderQR(S.qrMatrix, 'qrCanvas', 300);
+  });
+});
+
+// ── Eye style ─────────────────────────────────────────────────────
+[['eyeSquare', 'square'], ['eyeRound', 'round'], ['eyeCircle', 'circle']].forEach(([id, val]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    ['eyeSquare', 'eyeRound', 'eyeCircle'].forEach(i => document.getElementById(i).classList.remove('active'));
+    document.getElementById(id).classList.add('active'); S.eyeStyle = val;
+    if (S.qrMatrix) renderQR(S.qrMatrix, 'qrCanvas', 300);
+  });
+});
+
+// ── Mode ───────────────────────────────────────────────────────────
+['modeColor', 'modeGrad', 'modeSplit'].forEach((id, i) => {
+  document.getElementById(id).addEventListener('click', () => {
+    ['modeColor', 'modeGrad', 'modeSplit'].forEach(x => document.getElementById(x).classList.remove('active'));
+    document.getElementById(id).classList.add('active'); S.mode = ['color', 'grad', 'split'][i];
+    if (S.qrMatrix) renderQR(S.qrMatrix, 'qrCanvas', 300);
+  });
+});
+
+// ── Colors ────────────────────────────────────────────────────────
+function setupColors(cid, key, cusId) {
+  const cont = document.getElementById(cid);
+  cont.querySelectorAll('.cd').forEach(d => {
+    d.addEventListener('click', () => {
+      cont.querySelectorAll('.cd').forEach(x => x.classList.remove('active'));
+      d.classList.add('active'); S[key] = d.dataset.c;
+      if (S.qrMatrix) renderQR(S.qrMatrix, 'qrCanvas', 300);
+    });
+  });
+  document.getElementById(cusId).addEventListener('input', e => {
+    cont.querySelectorAll('.cd').forEach(x => x.classList.remove('active'));
+    S[key] = e.target.value;
+    if (S.qrMatrix) renderQR(S.qrMatrix, 'qrCanvas', 300);
+  });
+}
+setupColors('bgColors', 'bgColor', 'bgCustom');
+setupColors('fgColors', 'fgColor', 'fgCustom');
+
+// ── Download ──────────────────────────────────────────────────────
+function dl(size) {
+  if (!S.qrMatrix) { document.getElementById('statusMsg').textContent = '請先生成 QR Code'; return; }
+  const cv = renderToCanvas(size);
+  const a = document.createElement('a');
+  a.download = 'qr-beauty-' + size + '.png';
+  a.href = cv.toDataURL('image/png');
+  a.click();
+}
+document.getElementById('dlPNG').addEventListener('click', () => dl(1024));
+document.getElementById('dlHD').addEventListener('click', () => dl(2048));
+document.getElementById('generateBtn').addEventListener('click', generate);
+
+// ── Init ──────────────────────────────────────────────────────────
+generate();
+</script>
+</body>
+</html>
